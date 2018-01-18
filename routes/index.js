@@ -6,20 +6,14 @@ var client = require('../db/index');
 
 module.exports = function makeRouterWithSockets (io) {
 
-  client.query('SELECT * FROM tweets', function (err, res) {
-    if (err) return next(err); // pass errors to Express
-    var tweets = res.rows;
-    res.render('index', { title: 'Twitter.js', tweets: tweets, showForm: true });
-  });
-
   // a reusable function
   function respondWithAllTweets (req, res, next){
-    var allTheTweets = tweetBank.list();
-    res.render('index', {
-      title: 'Twitter.js',
-      tweets: allTheTweets,
-      showForm: true
+    var allTheTweets = client.query('SELECT * FROM users INNER JOIN tweets on users.id=tweets.user_id', function (err, result) {
+      if (err) return next(err); // pass errors to Express
+      var tweets = result.rows;
+      res.render('index', { title: 'Twitter.js', tweets: tweets, showForm: true });
     });
+
   }
 
   // here we basically treet the root view and tweets view as identical
@@ -28,12 +22,12 @@ module.exports = function makeRouterWithSockets (io) {
 
   // single-user page
   router.get('/users/:username', function(req, res, next){
-    var tweetsForName = tweetBank.find({ name: req.params.username });
-    res.render('index', {
-      title: 'Twitter.js',
-      tweets: tweetsForName,
-      showForm: true,
-      username: req.params.username
+    var TweetsByName = client.query('SELECT * FROM users INNER JOIN tweets on users.id=tweets.user_id WHERE users.name=$1', 
+    [req.params.username], 
+    function (err, result) {
+      if (err) return next(err); // pass errors to Express
+      var tweets = result.rows;
+      res.render('index', { title: 'Twitter.js', tweets: tweets, showForm: true, username: req.params.username });
     });
   });
 
@@ -47,6 +41,9 @@ module.exports = function makeRouterWithSockets (io) {
   });
 
   // create a new tweet
+  client.query('INSERT * FROM users INNER JOIN tweets on users.id=tweets.user_id WHERE users.name=$1', 
+  [req.params.username], 
+
   router.post('/tweets', function(req, res, next){
     var newTweet = tweetBank.add(req.body.name, req.body.content);
     io.sockets.emit('new_tweet', newTweet);
