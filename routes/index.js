@@ -22,8 +22,8 @@ module.exports = function makeRouterWithSockets (io) {
 
   // single-user page
   router.get('/users/:username', function(req, res, next){
-    var TweetsByName = client.query('SELECT * FROM users INNER JOIN tweets on users.id=tweets.user_id WHERE users.name=$1', 
-    [req.params.username], 
+    var TweetsByName = client.query('SELECT * FROM users INNER JOIN tweets on users.id=tweets.user_id WHERE users.name=$1',
+    [req.params.username],
     function (err, result) {
       if (err) return next(err); // pass errors to Express
       var tweets = result.rows;
@@ -41,15 +41,16 @@ module.exports = function makeRouterWithSockets (io) {
   });
 
   // create a new tweet
-  client.query('INSERT * FROM users INNER JOIN tweets on users.id=tweets.user_id WHERE users.name=$1', 
-  [req.params.username], 
+// tweetBank.add(req.body.name, req.body.content);
 
   router.post('/tweets', function(req, res, next){
-    var newTweet = tweetBank.add(req.body.name, req.body.content);
+    var newTweet = client.query('INSERT INTO tweets (USER_ID, CONTENT) VALUES ($1, $2)' , [req.body.name,req.body.content],
+    function (err, result) {
+      if (err) return next(err);
     io.sockets.emit('new_tweet', newTweet);
     res.redirect('/');
   });
-
+});
   // // replaced this hard-coded route with general static routing in app.js
   // router.get('/stylesheets/style.css', function(req, res, next){
   //   res.sendFile('/stylesheets/style.css', { root: __dirname + '/../public/' });
