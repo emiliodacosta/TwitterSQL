@@ -33,10 +33,14 @@ module.exports = function makeRouterWithSockets (io) {
 
   // single-tweet page
   router.get('/tweets/:id', function(req, res, next){
-    var tweetsWithThatId = tweetBank.find({ id: Number(req.params.id) });
-    res.render('index', {
+    var tweetsWithThatId = client.query('SELECT tweets.id AS tweet_id FROM users INNER JOIN tweets on users.id=tweets.user_id WHERE tweets.id=$1',
+    [req.params.id],
+    function (err, result) {
+      if (err) return next(err); // pass errors to Express
+      res.render('index', {
       title: 'Twitter.js',
       tweets: tweetsWithThatId // an array of only one element ;-)
+      });
     });
   });
 
@@ -44,13 +48,14 @@ module.exports = function makeRouterWithSockets (io) {
 // tweetBank.add(req.body.name, req.body.content);
 
   router.post('/tweets', function(req, res, next){
-    var newTweet = client.query('INSERT INTO tweets (USER_ID, CONTENT) VALUES ($1, $2)' , [req.body.name,req.body.content],
+    var newTweet = client.query('INSERT INTO tweets (USER_ID, CONTENT) VALUES ($1, $2)' , 
+    [req.body.name, req.body.content],
     function (err, result) {
       if (err) return next(err);
-    io.sockets.emit('new_tweet', newTweet);
-    res.redirect('/');
+      io.sockets.emit('new_tweet', newTweet);
+      res.redirect('/');
+    });
   });
-});
   // // replaced this hard-coded route with general static routing in app.js
   // router.get('/stylesheets/style.css', function(req, res, next){
   //   res.sendFile('/stylesheets/style.css', { root: __dirname + '/../public/' });
